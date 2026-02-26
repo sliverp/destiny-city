@@ -320,9 +320,59 @@
         </div>
       </Transition>
 
+      <!-- ====== SHARE PROGRESS ====== -->
+      <Transition name="fade-up" appear>
+        <div class="mb-6" style="transition-delay: 0.8s">
+          <div class="bg-white/5 border border-white/10 rounded-2xl p-6">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-white text-sm font-medium">分享获取新邀请码</span>
+              <span class="text-gray-500 text-xs">（{{ shareProgress.visitor_count }}/{{ shareProgress.required }}）</span>
+            </div>
+            <p class="text-gray-500 text-xs mb-4">分享链接给好友，集齐 {{ shareProgress.required }} 人点击即可获得新邀请码</p>
+
+            <!-- Progress bar -->
+            <div class="w-full h-2 bg-gray-800 rounded-full overflow-hidden mb-3">
+              <div
+                class="h-full rounded-full transition-all duration-700 ease-out"
+                :class="shareProgress.completed ? 'bg-green-400' : 'bg-white'"
+                :style="{ width: (shareProgress.visitor_count / shareProgress.required * 100) + '%' }"
+              ></div>
+            </div>
+
+            <!-- Progress dots -->
+            <div class="flex justify-between mb-4">
+              <div
+                v-for="i in shareProgress.required"
+                :key="i"
+                class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono transition-all duration-300"
+                :class="i <= shareProgress.visitor_count
+                  ? 'bg-white text-gray-900'
+                  : 'bg-gray-800 text-gray-600 border border-gray-700'"
+              >
+                {{ i <= shareProgress.visitor_count ? '✓' : i }}
+              </div>
+            </div>
+
+            <!-- Reward code -->
+            <Transition name="fade">
+              <div v-if="shareProgress.completed && shareProgress.reward_code" class="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-center">
+                <p class="text-green-400 text-xs mb-2">恭喜！已获得新邀请码</p>
+                <p class="text-white text-lg font-mono tracking-[0.2em] font-bold">{{ shareProgress.reward_code }}</p>
+                <button
+                  @click="copyRewardCode"
+                  class="mt-2 px-4 py-1.5 bg-green-500/20 border border-green-500/30 rounded-lg text-green-300 text-xs hover:bg-green-500/30 transition-colors"
+                >
+                  {{ rewardCopied ? '✓ 已复制' : '复制邀请码' }}
+                </button>
+              </div>
+            </Transition>
+          </div>
+        </div>
+      </Transition>
+
       <!-- ====== ACTIONS ====== -->
       <Transition name="fade-up" appear>
-        <div class="space-y-3" style="transition-delay: 0.8s">
+        <div class="space-y-3" style="transition-delay: 0.85s">
           <button
             @click="copyShareLink"
             class="w-full py-3.5 bg-white text-gray-900 rounded-xl font-medium text-sm tracking-wider transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
@@ -361,16 +411,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { getResult } from '../api'
+import { getResult, getShareProgress } from '../api'
 import type { MatchResult, FullReport } from '../types'
 
 const route = useRoute()
 const result = ref<MatchResult | null>(null)
 const loading = ref(true)
 const copied = ref(false)
+const rewardCopied = ref(false)
 const displayScore = ref(0)
+
+const shareProgress = reactive({
+  visitor_count: 0,
+  required: 3,
+  completed: false,
+  reward_code: null as string | null,
+})
 
 const report = computed<FullReport | undefined>(() => result.value?.report ?? undefined)
 
@@ -391,6 +449,7 @@ onMounted(async () => {
         sessionStorage.removeItem('destiny_result')
         loading.value = false
         animateScore(parsed.score)
+        loadShareProgress(shareId)
         return
       }
     } catch {}
@@ -399,12 +458,23 @@ onMounted(async () => {
   try {
     result.value = await getResult(shareId)
     animateScore(result.value.score)
+    loadShareProgress(shareId)
   } catch {
     result.value = null
   } finally {
     loading.value = false
   }
 })
+
+async function loadShareProgress(shareId: string) {
+  try {
+    const progress = await getShareProgress(shareId)
+    shareProgress.visitor_count = progress.visitor_count
+    shareProgress.required = progress.required
+    shareProgress.completed = progress.completed
+    shareProgress.reward_code = progress.reward_code
+  } catch {}
+}
 
 function animateScore(target: number) {
   const duration = 1500
@@ -434,6 +504,24 @@ async function copyShareLink() {
     document.body.removeChild(input)
     copied.value = true
     setTimeout(() => (copied.value = false), 2000)
+  }
+}
+
+async function copyRewardCode() {
+  if (!shareProgress.reward_code) return
+  try {
+    await navigator.clipboard.writeText(shareProgress.reward_code)
+    rewardCopied.value = true
+    setTimeout(() => (rewardCopied.value = false), 2000)
+  } catch {
+    const input = document.createElement('input')
+    input.value = shareProgress.reward_code
+    document.body.appendChild(input)
+    input.select()
+    document.execCommand('copy')
+    document.body.removeChild(input)
+    rewardCopied.value = true
+    setTimeout(() => (rewardCopied.value = false), 2000)
   }
 }
 </script>

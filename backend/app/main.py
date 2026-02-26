@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.seed import init_db
-from app.routers import invite, quiz, test, result, admin
+from app.routers import invite, quiz, test, result, admin, share
 
 app = FastAPI(title="Destiny City API", version="0.1.0")
 
@@ -18,6 +18,7 @@ app.include_router(quiz.router)
 app.include_router(test.router)
 app.include_router(result.router)
 app.include_router(admin.router)
+app.include_router(share.router)
 
 
 @app.on_event("startup")

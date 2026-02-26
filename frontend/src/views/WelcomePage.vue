@@ -34,9 +34,9 @@
           <input
             v-model="inviteCode"
             type="text"
-            placeholder="请输入 8 位邀请码"
-            maxlength="8"
-            class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 text-center text-lg tracking-[0.3em] font-mono placeholder:text-gray-300 placeholder:tracking-normal placeholder:text-sm placeholder:font-sans focus:outline-none focus:border-gray-900 transition-colors duration-200"
+            placeholder="请输入 12 位邀请码（区分大小写）"
+            maxlength="12"
+            class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 text-center text-lg tracking-[0.2em] font-mono placeholder:text-gray-300 placeholder:tracking-normal placeholder:text-sm placeholder:font-sans focus:outline-none focus:border-gray-900 transition-colors duration-200"
             :disabled="loading"
             @keyup.enter="handleVerify"
           />
@@ -57,6 +57,18 @@
             正在验证...
           </span>
         </button>
+
+        <!-- 购买邀请码链接 -->
+        <div class="mt-4 text-center">
+          <a
+            :href="buyLink"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-gray-400 text-xs hover:text-gray-600 transition-colors underline underline-offset-4"
+          >
+            还没有邀请码？点击购买
+          </a>
+        </div>
       </div>
 
       <!-- Helper links -->
@@ -109,6 +121,9 @@ const errorMsg = ref('')
 const showShareInput = ref(false)
 const shareId = ref('')
 
+// 发货平台链接（待替换为实际链接）
+const buyLink = ref('https://example.com/buy-invite-code')
+
 async function handleVerify() {
   if (!inviteCode.value.trim()) return
   loading.value = true
@@ -117,8 +132,14 @@ async function handleVerify() {
   try {
     const res = await verifyInviteCode(inviteCode.value.trim())
     if (res.valid) {
-      sessionStorage.setItem('destiny_token', res.token)
-      router.push('/quiz')
+      if (res.share_id) {
+        // 已使用的邀请码，跳转到报告页
+        router.push(`/result/${res.share_id}`)
+      } else {
+        // 新邀请码，进入测试
+        sessionStorage.setItem('destiny_token', res.token)
+        router.push('/quiz')
+      }
     } else {
       errorMsg.value = res.message || '邀请码无效'
     }

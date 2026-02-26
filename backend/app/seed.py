@@ -2,7 +2,7 @@ import json
 import os
 from sqlalchemy.orm import Session
 from app.database import engine, Base, SessionLocal
-from app.models import City, Question
+from app.models import City, Question, ShareVisitor, ShareReward, TestProgress
 
 
 def init_db():

@@ -10,6 +10,7 @@ class InviteVerifyResponse(BaseModel):
     valid: bool
     token: str = ""
     message: str = ""
+    share_id: str = ""  # 已用邀请码时返回对应的报告share_id
 
 
 class SubmitAnswersRequest(BaseModel):

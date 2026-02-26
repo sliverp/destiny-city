@@ -232,17 +232,37 @@ async function generate() {
   }
 }
 
-async function copyAllCodes() {
+function fallbackCopy(text: string): boolean {
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.style.position = 'fixed'
+  textarea.style.left = '-9999px'
+  document.body.appendChild(textarea)
+  textarea.select()
+  let ok = false
   try {
-    await navigator.clipboard.writeText(newCodes.value.join('\n'))
-    copiedAll.value = true
-    setTimeout(() => (copiedAll.value = false), 2000)
+    ok = document.execCommand('copy')
   } catch {}
+  document.body.removeChild(textarea)
+  return ok
+}
+
+async function copyAllCodes() {
+  const text = newCodes.value.join('\n')
+  try {
+    await navigator.clipboard.writeText(text)
+  } catch {
+    if (!fallbackCopy(text)) return
+  }
+  copiedAll.value = true
+  setTimeout(() => (copiedAll.value = false), 2000)
 }
 
 async function copySingle(code: string) {
   try {
     await navigator.clipboard.writeText(code)
-  } catch {}
+  } catch {
+    fallbackCopy(code)
+  }
 }
 </script>

@@ -6,7 +6,7 @@ const api = axios.create({
   timeout: 10000,
 })
 
-export async function verifyInviteCode(code: string): Promise<{ valid: boolean; token: string; message: string }> {
+export async function verifyInviteCode(code: string): Promise<{ valid: boolean; token: string; message: string; share_id: string }> {
   const { data } = await api.post('/invite/verify', { code })
   return data
 }
@@ -52,6 +52,50 @@ export async function getInviteCodes(
 ): Promise<InviteCode[]> {
   const { data } = await api.get('/admin/invite-codes', {
     headers: { 'X-Admin-Key': adminKey },
+  })
+  return data
+}
+
+export async function recordShareVisit(shareId: string): Promise<{
+  visitor_count: number
+  required: number
+  completed: boolean
+  reward_code: string | null
+}> {
+  const { data } = await api.post(`/share/${shareId}/visit`)
+  return data
+}
+
+export async function getShareProgress(shareId: string): Promise<{
+  visitor_count: number
+  required: number
+  completed: boolean
+  reward_code: string | null
+}> {
+  const { data } = await api.get(`/share/${shareId}/progress`)
+  return data
+}
+
+export async function saveTestProgress(
+  token: string,
+  answers: Record<number, string>,
+  currentIndex: number,
+  cityScope: string,
+): Promise<void> {
+  await api.post(
+    '/test/progress',
+    { answers, current_index: currentIndex, city_scope: cityScope },
+    { headers: { Authorization: `Bearer ${token}` } }
+  )
+}
+
+export async function getTestProgress(token: string): Promise<{
+  answers: Record<number, string>
+  current_index: number
+  city_scope: string
+}> {
+  const { data } = await api.get('/test/progress', {
+    headers: { Authorization: `Bearer ${token}` },
   })
   return data
 }

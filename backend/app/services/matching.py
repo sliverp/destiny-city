@@ -50,8 +50,15 @@ def cosine_similarity(vec_a: list[float], vec_b: list[float]) -> float:
     return dot / (mag_a * mag_b)
 
 
-def match_cities(user_vector: list[float], db: Session) -> list[tuple[City, float]]:
+def match_cities(user_vector: list[float], db: Session, city_scope: str = "any") -> list[tuple[City, float]]:
     cities = db.query(City).all()
+
+    # 根据城市范围过滤
+    if city_scope == "domestic":
+        cities = [c for c in cities if c.country == "中国"]
+    elif city_scope == "overseas":
+        cities = [c for c in cities if c.country != "中国"]
+
     results = []
     for city in cities:
         city_attrs = json.loads(city.attributes)

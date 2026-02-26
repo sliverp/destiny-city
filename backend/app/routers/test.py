@@ -1,10 +1,11 @@
 import json
 import uuid
 import base64
+import datetime
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import Question, UserResult
+from app.models import Question, UserResult, TestProgress, City
 from app.schemas import (
     SubmitAnswersRequest, MatchResultResponse, CityResponse, RunnerUp,
     FullReport, ElementAnalysis, ZodiacAnalysis, TarotReading,
@@ -27,6 +28,53 @@ def decode_token(authorization: str = Header(...)) -> int:
         raise HTTPException(status_code=401, detail="无效的认证令牌")
 
 
+@router.get("/progress")
+def get_progress(
+    db: Session = Depends(get_db),
+    authorization: str = Header(...),
+):
+    """获取答题进度"""
+    invite_id = decode_token(authorization)
+    progress = db.query(TestProgress).filter(TestProgress.invite_code_id == invite_id).first()
+    if not progress:
+        return {"answers": {}, "current_index": 0, "city_scope": "any"}
+    return {
+        "answers": json.loads(progress.answers),
+        "current_index": progress.current_index,
+        "city_scope": progress.city_scope,
+    }
+
+
+@router.post("/progress")
+def save_progress(
+    req: dict,
+    db: Session = Depends(get_db),
+    authorization: str = Header(...),
+):
+    """保存答题进度"""
+    invite_id = decode_token(authorization)
+    answers = req.get("answers", {})
+    current_index = req.get("current_index", 0)
+    city_scope = req.get("city_scope", "any")
+
+    progress = db.query(TestProgress).filter(TestProgress.invite_code_id == invite_id).first()
+    if progress:
+        progress.answers = json.dumps(answers)
+        progress.current_index = current_index
+        progress.city_scope = city_scope
+        progress.updated_at = datetime.datetime.utcnow()
+    else:
+        progress = TestProgress(
+            invite_code_id=invite_id,
+            answers=json.dumps(answers),
+            current_index=current_index,
+            city_scope=city_scope,
+        )
+        db.add(progress)
+    db.commit()
+    return {"ok": True}
+
+
 @router.post("/submit", response_model=MatchResultResponse)
 def submit_test(
     req: SubmitAnswersRequest,
@@ -40,6 +88,10 @@ def submit_test(
     if existing:
         raise HTTPException(status_code=400, detail="该邀请码已完成测试")
 
+    # 获取城市范围偏好
+    progress = db.query(TestProgress).filter(TestProgress.invite_code_id == invite_id).first()
+    city_scope = progress.city_scope if progress else "any"
+
     # Build questions map
     questions = db.query(Question).all()
     questions_map: dict[int, list] = {}
@@ -49,7 +101,7 @@ def submit_test(
 
     # Calculate user vector and match
     user_vector = calculate_user_vector(req.answers, questions_map)
-    ranked = match_cities(user_vector, db)
+    ranked = match_cities(user_vector, db, city_scope=city_scope)
 
     if not ranked:
         raise HTTPException(status_code=500, detail="匹配失败")
@@ -77,6 +129,11 @@ def submit_test(
         runner_ups=json.dumps(runner_ups_data),
     )
     db.add(result)
+
+    # 清除答题进度
+    if progress:
+        db.delete(progress)
+
     db.commit()
 
     city_resp = CityResponse(

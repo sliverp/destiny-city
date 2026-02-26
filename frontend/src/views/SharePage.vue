@@ -211,7 +211,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { getResult } from '../api'
+import { getResult, recordShareVisit } from '../api'
 import type { MatchResult, FullReport } from '../types'
 
 const route = useRoute()
@@ -225,9 +225,21 @@ const elementIcon = computed(() => {
   return map[report.value?.element_analysis.element ?? ''] ?? '✦'
 })
 
+function ensureVisitorCookie() {
+  if (!document.cookie.includes('visitor_id=')) {
+    const id = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)
+    document.cookie = `visitor_id=${id}; path=/; max-age=${10 * 365 * 24 * 3600}; samesite=lax`
+  }
+}
+
 onMounted(async () => {
+  const shareId = route.params.shareId as string
+  ensureVisitorCookie()
+
   try {
-    result.value = await getResult(route.params.shareId as string)
+    result.value = await getResult(shareId)
+    // 记录访问（后端会自动去重）
+    await recordShareVisit(shareId).catch(() => {})
   } catch {
     result.value = null
   } finally {
