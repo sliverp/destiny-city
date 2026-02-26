@@ -66,7 +66,7 @@
             rel="noopener noreferrer"
             class="text-gray-400 text-xs hover:text-gray-600 transition-colors underline underline-offset-4"
           >
-            还没有邀请码？点击购买
+            还没有邀请码？点击获取
           </a>
         </div>
       </div>
@@ -122,7 +122,7 @@ const showShareInput = ref(false)
 const shareId = ref('')
 
 // 发货平台链接（待替换为实际链接）
-const buyLink = ref('https://example.com/buy-invite-code')
+const buyLink = ref('https://p.goofish.com/p/CcrqpKfu')
 
 async function handleVerify() {
   if (!inviteCode.value.trim()) return
