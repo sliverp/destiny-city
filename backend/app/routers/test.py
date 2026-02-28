@@ -37,11 +37,12 @@ def get_progress(
     invite_id = decode_token(authorization)
     progress = db.query(TestProgress).filter(TestProgress.invite_code_id == invite_id).first()
     if not progress:
-        return {"answers": {}, "current_index": 0, "city_scope": "any"}
+        return {"answers": {}, "current_index": 0, "city_scope": "any", "belief_system": ""}
     return {
         "answers": json.loads(progress.answers),
         "current_index": progress.current_index,
         "city_scope": progress.city_scope,
+        "belief_system": progress.belief_system,
     }
 
 
@@ -56,12 +57,14 @@ def save_progress(
     answers = req.get("answers", {})
     current_index = req.get("current_index", 0)
     city_scope = req.get("city_scope", "any")
+    belief_system = req.get("belief_system", "all")
 
     progress = db.query(TestProgress).filter(TestProgress.invite_code_id == invite_id).first()
     if progress:
         progress.answers = json.dumps(answers)
         progress.current_index = current_index
         progress.city_scope = city_scope
+        progress.belief_system = belief_system
         progress.updated_at = datetime.datetime.utcnow()
     else:
         progress = TestProgress(
@@ -69,6 +72,7 @@ def save_progress(
             answers=json.dumps(answers),
             current_index=current_index,
             city_scope=city_scope,
+            belief_system=belief_system,
         )
         db.add(progress)
     db.commit()
@@ -88,9 +92,10 @@ def submit_test(
     if existing:
         raise HTTPException(status_code=400, detail="该邀请码已完成测试")
 
-    # 获取城市范围偏好
+    # 获取用户偏好
     progress = db.query(TestProgress).filter(TestProgress.invite_code_id == invite_id).first()
     city_scope = progress.city_scope if progress else "any"
+    belief_system = progress.belief_system if progress else "all"
 
     # Build questions map
     questions = db.query(Question).all()
@@ -127,6 +132,7 @@ def submit_test(
         interpretation=interpretation,
         user_vector=json.dumps(user_vector),
         runner_ups=json.dumps(runner_ups_data),
+        belief_system=belief_system,
     )
     db.add(result)
 

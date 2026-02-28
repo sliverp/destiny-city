@@ -46,3 +46,15 @@ def list_codes(
         )
         for inv in invites
     ]
+
+
+@router.get("/auto-deliver")
+def auto_deliver(
+    key: str,
+    db: Session = Depends(get_db),
+):
+    """自动发货接口：浏览器直接访问即可生成邀请码"""
+    if key != ADMIN_KEY:
+        raise HTTPException(status_code=403, detail="密钥错误")
+    codes = create_invite_codes(db, 1)
+    return {"code": codes[0]}

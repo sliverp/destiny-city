@@ -11,8 +11,9 @@ export async function verifyInviteCode(code: string): Promise<{ valid: boolean; 
   return data
 }
 
-export async function getQuestions(token: string): Promise<Question[]> {
+export async function getQuestions(token: string, beliefSystem: string = 'all'): Promise<Question[]> {
   const { data } = await api.get('/questions', {
+    params: { belief_system: beliefSystem },
     headers: { Authorization: `Bearer ${token}` },
   })
   return data
@@ -61,6 +62,7 @@ export async function recordShareVisit(shareId: string): Promise<{
   required: number
   completed: boolean
   reward_code: string | null
+  reward_code_used: boolean
 }> {
   const { data } = await api.post(`/share/${shareId}/visit`)
   return data
@@ -71,6 +73,7 @@ export async function getShareProgress(shareId: string): Promise<{
   required: number
   completed: boolean
   reward_code: string | null
+  reward_code_used: boolean
 }> {
   const { data } = await api.get(`/share/${shareId}/progress`)
   return data
@@ -81,10 +84,11 @@ export async function saveTestProgress(
   answers: Record<number, string>,
   currentIndex: number,
   cityScope: string,
+  beliefSystem: string,
 ): Promise<void> {
   await api.post(
     '/test/progress',
-    { answers, current_index: currentIndex, city_scope: cityScope },
+    { answers, current_index: currentIndex, city_scope: cityScope, belief_system: beliefSystem },
     { headers: { Authorization: `Bearer ${token}` } }
   )
 }
@@ -93,9 +97,28 @@ export async function getTestProgress(token: string): Promise<{
   answers: Record<number, string>
   current_index: number
   city_scope: string
+  belief_system: string
 }> {
   const { data } = await api.get('/test/progress', {
     headers: { Authorization: `Bearer ${token}` },
   })
+  return data
+}
+
+export interface ShowcaseItem {
+  share_id: string
+  city_name: string
+  country: string
+  score: number
+  element: string
+  zodiac: string
+  tarot: string
+  energy_type: string
+  wuxing: string
+  vibe: string
+}
+
+export async function getRandomShowcase(): Promise<{ items: ShowcaseItem[] }> {
+  const { data } = await api.get('/result/showcase/random')
   return data
 }

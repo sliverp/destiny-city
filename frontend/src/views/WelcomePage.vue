@@ -59,20 +59,55 @@
         </button>
 
         <!-- 购买邀请码链接 -->
-        <div class="mt-4 text-center">
+        <div class="mt-5 text-center">
           <a
             :href="buyLink"
             target="_blank"
             rel="noopener noreferrer"
-            class="text-gray-400 text-xs hover:text-gray-600 transition-colors underline underline-offset-4"
+            class="inline-block px-5 py-2.5 rounded-xl border border-gray-200 text-gray-500 text-sm font-medium hover:text-gray-900 hover:border-gray-400 hover:bg-gray-50 transition-all duration-200"
           >
-            还没有邀请码？点击获取
+            还没有邀请码？点击获取 →
           </a>
         </div>
       </div>
 
+      <!-- 别人的测试结果 -->
+      <div v-if="showcaseItems.length" class="mt-8 max-w-md mx-auto">
+        <p class="text-gray-600 text-xs text-center tracking-wider mb-3">✦ 他们找到了自己的天选城市</p>
+        <div class="space-y-2">
+          <button
+            v-for="item in showcaseItems"
+            :key="item.share_id"
+            @click="$router.push(`/share/${item.share_id}`)"
+            class="w-full text-left p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-200 group"
+          >
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-white text-sm font-medium">{{ item.city_name }}</span>
+                <span class="text-gray-600 text-xs ml-1.5">{{ item.country }}</span>
+              </div>
+              <span class="text-gray-400 text-xs font-mono">{{ item.score.toFixed(1) }}%</span>
+            </div>
+            <div class="flex gap-1.5 mt-1.5">
+              <span class="text-[10px] text-gray-500">{{ item.wuxing }}行</span>
+              <span class="text-[10px] text-gray-600">·</span>
+              <span class="text-[10px] text-gray-500">{{ item.zodiac }}</span>
+              <span class="text-[10px] text-gray-600">·</span>
+              <span class="text-[10px] text-gray-500">{{ item.tarot }}</span>
+            </div>
+          </button>
+          <button
+            @click="loadShowcase"
+            class="w-full text-center text-gray-600 text-xs py-2 hover:text-gray-400 transition-colors"
+            :disabled="loadingShowcase"
+          >
+            {{ loadingShowcase ? '加载中...' : '换一批 ↻' }}
+          </button>
+        </div>
+      </div>
+
       <!-- Helper links -->
-      <div class="mt-8 text-center space-y-3">
+      <div class="mt-6 text-center space-y-3">
         <p class="text-gray-600 text-xs">
           查看好友的测试结果？
           <button @click="showShareInput = !showShareInput" class="text-white underline underline-offset-4 hover:no-underline transition-all ml-1">
@@ -110,9 +145,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { verifyInviteCode } from '../api'
+import { verifyInviteCode, getRandomShowcase } from '../api'
+import type { ShowcaseItem } from '../api'
 
 const router = useRouter()
 const inviteCode = ref('')
@@ -120,9 +156,15 @@ const loading = ref(false)
 const errorMsg = ref('')
 const showShareInput = ref(false)
 const shareId = ref('')
+const loadingShowcase = ref(false)
+const showcaseItems = ref<ShowcaseItem[]>([])
 
-// 发货平台链接（待替换为实际链接）
+// 发货平台链接
 const buyLink = ref('https://p.goofish.com/p/CcrqpKfu')
+
+onMounted(() => {
+  loadShowcase()
+})
 
 async function handleVerify() {
   if (!inviteCode.value.trim()) return
@@ -147,6 +189,18 @@ async function handleVerify() {
     errorMsg.value = e?.response?.data?.detail || '验证失败，请稍后重试'
   } finally {
     loading.value = false
+  }
+}
+
+async function loadShowcase() {
+  loadingShowcase.value = true
+  try {
+    const res = await getRandomShowcase()
+    showcaseItems.value = res.items
+  } catch {
+    showcaseItems.value = []
+  } finally {
+    loadingShowcase.value = false
   }
 }
 

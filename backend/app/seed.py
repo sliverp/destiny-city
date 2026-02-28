@@ -50,6 +50,7 @@ def seed_questions(db: Session):
             category=q_data["category"],
             content=q_data["content"],
             options=json.dumps(q_data["options"], ensure_ascii=False),
+            belief_systems=q_data.get("belief_systems", "all"),
         )
         db.add(question)
     db.commit()

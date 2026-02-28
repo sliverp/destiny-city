@@ -27,6 +27,7 @@ class Question(Base):
     category = Column(String(50), nullable=False)
     content = Column(Text, nullable=False)
     options = Column(Text, nullable=False)  # JSON: list of {id, content, weights}
+    belief_systems = Column(String(100), nullable=False, default="all")  # 逗号分隔: bazi,tarot,none 或 all
 
 
 class InviteCode(Base):
@@ -52,6 +53,7 @@ class UserResult(Base):
     interpretation = Column(Text, nullable=False)
     user_vector = Column(Text, nullable=True)  # JSON: list of 10 floats
     runner_ups = Column(Text, nullable=False)  # JSON
+    belief_system = Column(String(20), nullable=False, default="all")  # bazi / tarot / none
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
@@ -84,4 +86,5 @@ class TestProgress(Base):
     answers = Column(Text, nullable=False, default="{}")  # JSON: {question_id: option_id}
     current_index = Column(Integer, nullable=False, default=0)
     city_scope = Column(String(20), nullable=False, default="any")  # domestic / overseas / any
+    belief_system = Column(String(20), nullable=False, default="all")  # bazi / tarot / none
     updated_at = Column(DateTime, default=datetime.datetime.utcnow)

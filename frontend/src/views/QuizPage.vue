@@ -25,9 +25,10 @@
     <div class="flex-1 flex items-center justify-center px-4 py-8">
       <div class="w-full max-w-lg" v-if="!loadingQuestions">
 
-        <!-- Step 0: City Scope Selection -->
         <Transition :name="transitionName" mode="out-in">
-          <div v-if="currentIndex === -1" key="scope" class="space-y-6">
+
+          <!-- Step -2: City Scope Selection -->
+          <div v-if="currentStep === 'scope'" key="scope" class="space-y-6">
             <div class="bg-white rounded-2xl shadow-card p-6 md:p-8">
               <div class="mb-5">
                 <span class="inline-block px-3 py-1 bg-gray-100 text-gray-500 text-xs rounded-full tracking-wider">
@@ -84,6 +85,72 @@
                       "
                     >
                       {{ option.label }}
+                    </span>
+                    <span class="text-gray-400 text-xs mt-0.5 block">{{ option.desc }}</span>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Step -1: Belief System Selection (多选) -->
+          <div v-else-if="currentStep === 'belief'" key="belief" class="space-y-6">
+            <div class="bg-white rounded-2xl shadow-card p-6 md:p-8">
+              <div class="mb-5">
+                <span class="inline-block px-3 py-1 bg-gray-100 text-gray-500 text-xs rounded-full tracking-wider">
+                  ✦ 预测体系
+                </span>
+              </div>
+              <h2 class="text-gray-900 text-lg md:text-xl font-medium leading-relaxed">
+                你感兴趣的维度有哪些？
+              </h2>
+              <p class="text-gray-400 text-sm mt-2">可多选，我们会综合你的选择呈现不同风格的题目</p>
+            </div>
+
+            <div class="space-y-3">
+              <button
+                v-for="option in beliefOptions"
+                :key="option.value"
+                @click="toggleBelief(option.value)"
+                class="w-full text-left p-4 rounded-xl border transition-all duration-200 group"
+                :class="
+                  beliefSystem.includes(option.value)
+                    ? 'bg-gray-50 border-gray-900 shadow-sm'
+                    : 'bg-white border-gray-200 hover:border-gray-400 hover:shadow-sm'
+                "
+              >
+                <div class="flex items-start gap-3">
+                  <div
+                    class="mt-0.5 w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center transition-all duration-200"
+                    :class="
+                      beliefSystem.includes(option.value)
+                        ? 'border-gray-900 bg-gray-900'
+                        : 'border-gray-300 group-hover:border-gray-400'
+                    "
+                  >
+                    <svg
+                      v-if="beliefSystem.includes(option.value)"
+                      class="w-3 h-3 text-white"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="3"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </div>
+                  <div>
+                    <span
+                      class="text-sm md:text-base leading-relaxed transition-colors duration-200 block"
+                      :class="
+                        beliefSystem.includes(option.value)
+                          ? 'text-gray-900 font-medium'
+                          : 'text-gray-600 group-hover:text-gray-800'
+                      "
+                    >
+                      {{ option.icon }} {{ option.label }}
                     </span>
                     <span class="text-gray-400 text-xs mt-0.5 block">{{ option.desc }}</span>
                   </div>
@@ -153,6 +220,7 @@
               </button>
             </div>
           </div>
+
         </Transition>
       </div>
 
@@ -166,27 +234,51 @@
     <!-- Bottom navigation -->
     <div class="sticky bottom-0 bg-bg/95 backdrop-blur-sm border-t border-white/5 px-6 py-4">
       <div class="max-w-lg mx-auto flex items-center justify-between">
+        <!-- Back button -->
         <button
-          v-if="currentIndex > -1"
+          v-if="currentStep === 'belief'"
+          @click="goBackToScope"
+          class="px-4 py-2 text-gray-500 text-sm hover:text-white transition-colors"
+        >
+          ← 返回范围选择
+        </button>
+        <button
+          v-else-if="currentStep === 'question' && currentIndex === 0"
+          @click="goBackToBelief"
+          class="px-4 py-2 text-gray-500 text-sm hover:text-white transition-colors"
+        >
+          ← 返回体系选择
+        </button>
+        <button
+          v-else-if="currentStep === 'question' && currentIndex > 0"
           @click="prevQuestion"
           class="px-4 py-2 text-gray-500 text-sm hover:text-white transition-colors"
         >
-          ← {{ currentIndex === 0 ? '返回范围选择' : '上一题' }}
+          ← 上一题
         </button>
         <div v-else></div>
 
         <!-- Scope step: next button -->
         <button
-          v-if="currentIndex === -1"
+          v-if="currentStep === 'scope'"
           @click="nextFromScope"
           :disabled="!cityScope"
+          class="px-6 py-2.5 bg-white text-gray-900 rounded-xl text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+        >
+          下一步 →
+        </button>
+        <!-- Belief step: next button -->
+        <button
+          v-else-if="currentStep === 'belief'"
+          @click="nextFromBelief"
+          :disabled="beliefSystem.length === 0"
           class="px-6 py-2.5 bg-white text-gray-900 rounded-xl text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:translate-y-0"
         >
           开始答题 →
         </button>
         <!-- Regular question: next -->
         <button
-          v-else-if="currentIndex < questions.length - 1"
+          v-else-if="currentStep === 'question' && currentIndex < questions.length - 1"
           @click="nextQuestion"
           :disabled="!selectedOption"
           class="px-6 py-2.5 bg-white text-gray-900 rounded-xl text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:translate-y-0"
@@ -195,7 +287,7 @@
         </button>
         <!-- Last question: submit -->
         <button
-          v-else
+          v-else-if="currentStep === 'question'"
           @click="submitAnswers"
           :disabled="!selectedOption || submitting"
           class="px-6 py-2.5 bg-white text-gray-900 rounded-xl text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:translate-y-0"
@@ -222,13 +314,15 @@ import type { Question } from '../types'
 
 const router = useRouter()
 const questions = ref<Question[]>([])
-const currentIndex = ref(-1) // -1 = scope selection step
+const currentIndex = ref(0)
+const currentStep = ref<'scope' | 'belief' | 'question'>('scope')
 const answers = ref<Record<number, string>>({})
 const selectedOption = ref<string | null>(null)
 const loadingQuestions = ref(true)
 const submitting = ref(false)
 const transitionName = ref('slide-left')
 const cityScope = ref<string>('')
+const beliefSystem = ref<string[]>([])
 
 const scopeOptions = [
   { value: 'domestic', label: '国内城市', desc: '探索中国境内的天选城市，贴近生活、更有共鸣' },
@@ -236,24 +330,33 @@ const scopeOptions = [
   { value: 'any', label: '不限范围', desc: '让命运在全世界为你寻找最佳匹配' },
 ]
 
+const beliefOptions = [
+  { value: 'bazi', icon: '☯️', label: '生辰八字 / 五行', desc: '东方传统命理体系，基于阴阳五行相生相克' },
+  { value: 'tarot', icon: '🔮', label: '塔罗 / 星座', desc: '西方神秘学体系，基于塔罗牌与星座能量' },
+  { value: 'science', icon: '📊', label: '科学务实派', desc: '关注就业、医疗、教育、住房等现实指标' },
+  { value: 'none', icon: '🧠', label: '不迷信，图一乐', desc: '不信这些，但好奇自己和哪座城市最有缘' },
+]
+
 const currentQuestion = computed(() => questions.value[currentIndex.value])
 
-// 显示的序号：scope 页显示 1，问题从 2 开始
 const displayIndex = computed(() => {
-  if (currentIndex.value === -1) return '01'
-  return String(currentIndex.value + 2).padStart(2, '0')
+  if (currentStep.value === 'scope') return '01'
+  if (currentStep.value === 'belief') return '02'
+  return String(currentIndex.value + 3).padStart(2, '0')
 })
-const displayTotal = computed(() => String(questions.value.length + 1).padStart(2, '0'))
+const displayTotal = computed(() => String(questions.value.length + 2).padStart(2, '0'))
 
 const currentStepCategory = computed(() => {
-  if (currentIndex.value === -1) return '城市范围'
+  if (currentStep.value === 'scope') return '城市范围'
+  if (currentStep.value === 'belief') return '预测体系'
   return currentQuestion.value?.category ?? ''
 })
 
 const progressPercent = computed(() => {
-  const total = questions.value.length + 1 // +1 for scope step
-  if (currentIndex.value === -1) return (1 / total) * 100
-  return ((currentIndex.value + 2) / total) * 100
+  const total = questions.value.length + 2 // +2 for scope + belief steps
+  if (currentStep.value === 'scope') return (1 / total) * 100
+  if (currentStep.value === 'belief') return (2 / total) * 100
+  return ((currentIndex.value + 3) / total) * 100
 })
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null
@@ -263,7 +366,7 @@ function debouncedSave() {
   saveTimer = setTimeout(() => {
     const token = sessionStorage.getItem('destiny_token')
     if (token) {
-      saveTestProgress(token, answers.value, currentIndex.value, cityScope.value).catch(() => {})
+      saveTestProgress(token, answers.value, currentIndex.value, cityScope.value, beliefSystem.value.join(',')).catch(() => {})
     }
   }, 500)
 }
@@ -275,18 +378,35 @@ onMounted(async () => {
     return
   }
   try {
-    questions.value = await getQuestions(token)
-
-    // 恢复进度
+    // 先尝试恢复进度
     const progress = await getTestProgress(token)
-    if (progress.answers && Object.keys(progress.answers).length > 0) {
-      answers.value = progress.answers
+    if (progress.belief_system && progress.answers && Object.keys(progress.answers).length > 0) {
+      // 有已保存的进度，恢复状态
+      beliefSystem.value = progress.belief_system.split(',').filter(Boolean)
       cityScope.value = progress.city_scope || 'any'
+      answers.value = progress.answers
+
+      // 根据信仰体系加载对应题目
+      questions.value = await getQuestions(token, progress.belief_system)
+
       currentIndex.value = progress.current_index
+      currentStep.value = 'question'
+
       // 恢复当前题的已选选项
       if (currentIndex.value >= 0 && questions.value[currentIndex.value]) {
         selectedOption.value = answers.value[questions.value[currentIndex.value].id] || null
       }
+    } else if (progress.city_scope && progress.belief_system) {
+      // 选过了范围和体系但还没答题
+      cityScope.value = progress.city_scope
+      beliefSystem.value = progress.belief_system.split(',').filter(Boolean)
+      questions.value = await getQuestions(token, progress.belief_system)
+      currentStep.value = 'question'
+      currentIndex.value = 0
+      selectedOption.value = null
+    } else {
+      // 全新开始，先加载全部题目用于计数（实际答题时会重新加载）
+      questions.value = await getQuestions(token, 'all')
     }
   } catch {
     router.push('/')
@@ -303,9 +423,46 @@ function selectScope(value: string) {
 function nextFromScope() {
   if (!cityScope.value) return
   transitionName.value = 'slide-left'
-  currentIndex.value = 0
-  selectedOption.value = answers.value[questions.value[0]?.id] || null
+  currentStep.value = 'belief'
   debouncedSave()
+}
+
+function toggleBelief(value: string) {
+  const idx = beliefSystem.value.indexOf(value)
+  if (idx >= 0) {
+    beliefSystem.value.splice(idx, 1)
+  } else {
+    beliefSystem.value.push(value)
+  }
+}
+
+async function nextFromBelief() {
+  if (beliefSystem.value.length === 0) return
+  transitionName.value = 'slide-left'
+  loadingQuestions.value = true
+  try {
+    const token = sessionStorage.getItem('destiny_token')!
+    const beliefStr = beliefSystem.value.join(',')
+    questions.value = await getQuestions(token, beliefStr)
+    currentStep.value = 'question'
+    currentIndex.value = 0
+    selectedOption.value = answers.value[questions.value[0]?.id] || null
+    debouncedSave()
+  } catch {
+    // 加载失败保持当前步骤
+  } finally {
+    loadingQuestions.value = false
+  }
+}
+
+function goBackToScope() {
+  transitionName.value = 'slide-right'
+  currentStep.value = 'scope'
+}
+
+function goBackToBelief() {
+  transitionName.value = 'slide-right'
+  currentStep.value = 'belief'
 }
 
 function selectOption(optionId: string) {
@@ -329,13 +486,8 @@ function nextQuestion() {
 
 function prevQuestion() {
   transitionName.value = 'slide-right'
-  if (currentIndex.value === 0) {
-    currentIndex.value = -1
-    selectedOption.value = null
-  } else {
-    currentIndex.value--
-    selectedOption.value = answers.value[questions.value[currentIndex.value]?.id] || null
-  }
+  currentIndex.value--
+  selectedOption.value = answers.value[questions.value[currentIndex.value]?.id] || null
 }
 
 async function submitAnswers() {

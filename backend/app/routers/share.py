@@ -77,11 +77,19 @@ def record_visit(
         if invite:
             reward_code = invite.code
 
+    # 检查奖励码是否已被使用
+    reward_code_used = False
+    if reward and reward.reward_code_id:
+        invite = db.query(InviteCode).filter(InviteCode.id == reward.reward_code_id).first()
+        if invite and invite.is_used:
+            reward_code_used = True
+
     return {
         "visitor_count": min(unique_count, REQUIRED_VISITORS),
         "required": REQUIRED_VISITORS,
         "completed": unique_count >= REQUIRED_VISITORS,
         "reward_code": reward_code,
+        "reward_code_used": reward_code_used,
     }
 
 
@@ -102,14 +110,17 @@ def get_progress(
 
     reward = db.query(ShareReward).filter(ShareReward.share_id == share_id).first()
     reward_code = None
+    reward_code_used = False
     if reward and reward.reward_code_id:
         invite = db.query(InviteCode).filter(InviteCode.id == reward.reward_code_id).first()
         if invite:
             reward_code = invite.code
+            reward_code_used = invite.is_used
 
     return {
         "visitor_count": min(unique_count, REQUIRED_VISITORS),
         "required": REQUIRED_VISITORS,
         "completed": unique_count >= REQUIRED_VISITORS,
         "reward_code": reward_code,
+        "reward_code_used": reward_code_used,
     }

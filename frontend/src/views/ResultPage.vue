@@ -355,15 +355,22 @@
 
             <!-- Reward code -->
             <Transition name="fade">
-              <div v-if="shareProgress.completed && shareProgress.reward_code" class="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-center">
-                <p class="text-green-400 text-xs mb-2">恭喜！已获得新邀请码</p>
-                <p class="text-white text-lg font-mono tracking-[0.2em] font-bold">{{ shareProgress.reward_code }}</p>
-                <button
-                  @click="copyRewardCode"
-                  class="mt-2 px-4 py-1.5 bg-green-500/20 border border-green-500/30 rounded-lg text-green-300 text-xs hover:bg-green-500/30 transition-colors"
-                >
-                  {{ rewardCopied ? '✓ 已复制' : '复制邀请码' }}
-                </button>
+              <div v-if="shareProgress.completed && shareProgress.reward_code" class="rounded-xl p-4 text-center" :class="shareProgress.reward_code_used ? 'bg-gray-500/10 border border-gray-500/30' : 'bg-green-500/10 border border-green-500/30'">
+                <template v-if="shareProgress.reward_code_used">
+                  <p class="text-gray-400 text-xs mb-2">该邀请码已被使用</p>
+                  <p class="text-gray-500 text-lg font-mono tracking-[0.2em] font-bold line-through">{{ shareProgress.reward_code }}</p>
+                  <p class="text-gray-600 text-xs mt-2">继续分享可以让更多朋友看到你的测试结果</p>
+                </template>
+                <template v-else>
+                  <p class="text-green-400 text-xs mb-2">恭喜！已获得新邀请码</p>
+                  <p class="text-white text-lg font-mono tracking-[0.2em] font-bold">{{ shareProgress.reward_code }}</p>
+                  <button
+                    @click="copyRewardCode"
+                    class="mt-2 px-4 py-1.5 bg-green-500/20 border border-green-500/30 rounded-lg text-green-300 text-xs hover:bg-green-500/30 transition-colors"
+                  >
+                    {{ rewardCopied ? '✓ 已复制' : '复制邀请码' }}
+                  </button>
+                </template>
               </div>
             </Transition>
           </div>
@@ -383,7 +390,7 @@
             @click="$router.push('/')"
             class="w-full py-3.5 bg-transparent border border-gray-700 text-gray-400 rounded-xl text-sm tracking-wider transition-all duration-200 hover:border-gray-500 hover:text-gray-300"
           >
-            返回首页
+            新的测试
           </button>
         </div>
       </Transition>
@@ -428,6 +435,7 @@ const shareProgress = reactive({
   required: 3,
   completed: false,
   reward_code: null as string | null,
+  reward_code_used: false,
 })
 
 const report = computed<FullReport | undefined>(() => result.value?.report ?? undefined)
@@ -473,6 +481,7 @@ async function loadShareProgress(shareId: string) {
     shareProgress.required = progress.required
     shareProgress.completed = progress.completed
     shareProgress.reward_code = progress.reward_code
+    shareProgress.reward_code_used = progress.reward_code_used ?? false
   } catch {}
 }
 

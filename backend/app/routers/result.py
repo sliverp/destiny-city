@@ -1,6 +1,7 @@
 import json
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from app.database import get_db
 from app.models import UserResult, City
 from app.schemas import (
@@ -91,3 +92,36 @@ def get_result(share_id: str, db: Session = Depends(get_db)):
         runner_ups=runner_up_responses,
         share_id=result.share_id,
     )
+
+
+@router.get("/showcase/random")
+def get_random_showcase(db: Session = Depends(get_db)):
+    """随机返回几个已完成的测试结果摘要，供首页展示"""
+    results = (
+        db.query(UserResult)
+        .filter(UserResult.user_vector.isnot(None))
+        .order_by(func.random())
+        .limit(6)
+        .all()
+    )
+    if not results:
+        return {"items": []}
+
+    items = []
+    for r in results:
+        city = db.query(City).filter(City.id == r.matched_city_id).first()
+        if not city:
+            continue
+        items.append({
+            "share_id": r.share_id,
+            "city_name": city.name,
+            "country": city.country,
+            "score": r.match_score,
+            "element": city.element,
+            "zodiac": city.zodiac,
+            "tarot": city.tarot,
+            "energy_type": city.energy_type,
+            "wuxing": city.wuxing,
+            "vibe": city.vibe,
+        })
+    return {"items": items}
